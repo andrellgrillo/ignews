@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { Readable } from 'stream';
 import Stripe from "stripe";
 import { stripe } from "../../services/stripe";
+import { saveSubscription } from "./_lib/managedSubscription";
 
 async function buffer(readable: Readable) {
    const chunks = [];
@@ -20,7 +21,10 @@ export const config = {
 }
 
 const relevantEvents = new Set([
-   'checkout.session.completed'
+   'checkout.session.completed',
+   'custumer.subscription.created',
+   'customer.subscription.updated',
+   'customer.subscription.deleted'
 ])
 
 export default async(req: NextApiRequest, res: NextApiResponse) => {
@@ -37,9 +41,39 @@ export default async(req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const { type } = event;
-
+      console.log(type)
+      
       if (relevantEvents.has(type)) {
+         try {
+            switch (type) {
+               case 'customer.subscrition.created':
+               case 'customer.subscrition.created':
+               case 'customer.subscrition.created':
+                  const subscription = event.data.object as Stripe.Subscription;
 
+                  await saveSubscription(
+                     subscription.id,
+                     subscription.customer.toString(),
+                     type === 'customer.subscrition.created'
+                  )
+
+                  break;
+               case 'checkout.session.completed':
+                  // console.log('tipo: ', type)
+                  const checkoutSession = event.data.object as Stripe.Checkout.Session
+                  await saveSubscription(
+                     checkoutSession.subscription.toString(),
+                     checkoutSession.customer.toString(),
+                     true
+                  )
+                  break;
+            
+               default:
+                  throw new Error('Unhandled event');
+            }
+         } catch (err) {
+            return res.json({error: 'Webhook handler failed'})
+         }
       }
 
    res.status(200).json({ received: true})
