@@ -3,7 +3,22 @@ import Head from 'next/head';
 import { getPrismicClient } from '../../services/prismic';
 import Prismic from "@prismicio/client";
 import styles from './styles.module.scss';
-export default function Posts() {
+import { RichText } from 'prismic-dom'
+import Link from 'next/link';
+
+type Post = {
+   slug: string;
+   title: string;
+   excerpt: string;
+   updatedAt: string;
+
+}
+
+interface PostsProps {
+   posts: Post[]
+}
+
+export default function Posts({ posts }: PostsProps) {
    return (
       <>
          <Head>
@@ -11,59 +26,15 @@ export default function Posts() {
          </Head>
          <main className={styles.container}>
             <div className={styles.posts}>
-               <a>
-                  <time>12 de maio de 2021</time>
-                  <strong>
-                     CNM - MINISTÉRIO DA ECONOMIA DIVULGA ALTERAÇÃO NO CRONOGRAMA 
-                     PARA EXECUÇÃO DAS EMENDAS INDIVIDUAIS NA MODALIDADE ESPECIAL
-                  </strong>
-                  <p>A Secretaria de Gestão da Secretaria de Desburocratização, 
-                     Gestão e Governo Digital do Ministério da Economia, por meio 
-                     do Departamento de Transferências da União, divulgou na última 
-                     quarta-feira, 26 de maio, a alteração no cronograma para execução 
-                     das emendas individuais na modalidade especial. 
-                  </p>
-               </a>
-               <a>
-                  <time>12 de maio de 2021</time>
-                  <strong>
-                     CNM - MINISTÉRIO DA ECONOMIA DIVULGA ALTERAÇÃO NO CRONOGRAMA 
-                     PARA EXECUÇÃO DAS EMENDAS INDIVIDUAIS NA MODALIDADE ESPECIAL
-                  </strong>
-                  <p>A Secretaria de Gestão da Secretaria de Desburocratização, 
-                     Gestão e Governo Digital do Ministério da Economia, por meio 
-                     do Departamento de Transferências da União, divulgou na última 
-                     quarta-feira, 26 de maio, a alteração no cronograma para execução 
-                     das emendas individuais na modalidade especial. 
-                     A data de divulgação dos beneficiários na Plataforma +Brasil, 
-                     anteriormente prevista para 30 de maio, agora está para prevista 
-                     até 30 de junho. De acordo com o comunicado, a atualização foi 
-                     necessária para racionalizar os processos de solicitações de 
-                     todas as alterações orçamentárias, a partir do corrente exercício, 
-                     não sendo mais necessário o envio de ofícios aos órgãos detentores 
-                     das emendas.
-                  </p>
-               </a>
-               <a>
-                  <time>12 de maio de 2021</time>
-                  <strong>
-                     CNM - MINISTÉRIO DA ECONOMIA DIVULGA ALTERAÇÃO NO CRONOGRAMA 
-                     PARA EXECUÇÃO DAS EMENDAS INDIVIDUAIS NA MODALIDADE ESPECIAL
-                  </strong>
-                  <p>A Secretaria de Gestão da Secretaria de Desburocratização, 
-                     Gestão e Governo Digital do Ministério da Economia, por meio 
-                     do Departamento de Transferências da União, divulgou na última 
-                     quarta-feira, 26 de maio, a alteração no cronograma para execução 
-                     das emendas individuais na modalidade especial. 
-                     A data de divulgação dos beneficiários na Plataforma +Brasil, 
-                     anteriormente prevista para 30 de maio, agora está para prevista 
-                     até 30 de junho. De acordo com o comunicado, a atualização foi 
-                     necessária para racionalizar os processos de solicitações de 
-                     todas as alterações orçamentárias, a partir do corrente exercício, 
-                     não sendo mais necessário o envio de ofícios aos órgãos detentores 
-                     das emendas.
-                  </p>
-               </a>
+               { posts.map(post => (
+                  <Link href={`/posts/${post.slug}`}>
+                     <a href='#' key={post.slug}>
+                        <time>{post.updatedAt}</time>
+                        <strong>{post.title}</strong>
+                        <p>{post.excerpt}</p>
+                     </a>
+                  </Link>
+               ))}
             </div>
          </main>
       </>
@@ -80,11 +51,19 @@ export const getStaticProps: GetStaticProps = async() => {
       pageSize: 100
    })
 
-   console.log(response);
-
-   return {
-      props: {
-
+   const posts = response.results.map(post => {
+      return {
+         slug: post.uid,
+         title: RichText.asText(post.data.title),
+         excerpt: post.data.content.find(content => content.type === 'paragraph')?.text ?? '',
+         updateAt: new Date(post.last_publication_date).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+         })
       }
+   })
+   return {
+      props: { posts }
    }
 }
